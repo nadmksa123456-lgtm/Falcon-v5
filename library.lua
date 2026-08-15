@@ -3858,22 +3858,6 @@ end
 
             section:colorpicker({name = "Menu Accent", callback = function(color, alpha) library:update_theme("accent", color) end, color = themes.preset.accent})
 
-            -- Presets recolour the whole menu: logo, icons and toggles
-            local Presets = {
-                { "Blue",   rgb(0, 162, 255) },
-                { "Red",    rgb(255, 60, 60) },
-                { "Green",  rgb(60, 220, 130) },
-                { "Purple", rgb(160, 110, 255) },
-                { "Orange", rgb(255, 150, 40) },
-                { "White",  rgb(240, 240, 240) },
-            }
-
-            for _, Preset in Presets do
-                section:button({name = Preset[1], callback = function()
-                    library:update_theme("accent", Preset[2])
-                end})
-            end
-
             section:keybind({name = "Menu Bind", key = Enum.KeyCode.Insert, callback = function(bool) window.toggle_menu(bool) end, seperator = true, default = true})
 
             local _request = (http_request and http_request) or (request and request) or (http and http.request)
