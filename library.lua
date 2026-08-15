@@ -1301,55 +1301,28 @@ end
                 local cfg = {items = {}, size = properties.size or 1}
 
                 local items = cfg.items; do     
-                    -- ====================================================
-                    --  Scrollable column
-                    --
-                    --  Cards grow with their content, so a column can run
-                    --  past the bottom of the window and must scroll.
-                    --
-                    --  AutomaticCanvasSize stalls here: it measures the
-                    --  canvas before the AutomaticSize cards finish growing
-                    --  and never re-measures, so CanvasSize stays at 0 and
-                    --  the mouse wheel does nothing.
-                    --  Driving CanvasSize from the layout's own measurement
-                    --  is deterministic and updates on every content change.
-                    -- ====================================================
-                    items[ "column" ] = library:create( "ScrollingFrame" , {
+                    items[ "column" ] = library:create( "Frame" , {
                         Parent = self[ "parent" ] or self.items["tab_parent"];
                         BackgroundTransparency = 1;
                         Name = "\0";
                         BorderColor3 = rgb(0, 0, 0);
                         Size = dim2(0, 0, cfg.size, 0);
                         BorderSizePixel = 0;
-                        Active = true;
-                        ScrollingEnabled = true;
-                        ScrollingDirection = Enum.ScrollingDirection.Y;
-                        ElasticBehavior = Enum.ElasticBehavior.Never;
-                        CanvasSize = dim2(0, 0, 0, 0);
-                        ScrollBarThickness = 4;
-                        ScrollBarImageColor3 = rgb(44, 44, 46);
                         BackgroundColor3 = rgb(255, 255, 255)
                     });
-
+                    
                     library:create( "UIPadding" , {
                         PaddingBottom = dim(0, 10);
                         Parent = items[ "column" ]
                     });
-
-                    local layout = library:create( "UIListLayout" , {
+                    
+                    library:create( "UIListLayout" , {
                         Parent = items[ "column" ];
                         HorizontalFlex = Enum.UIFlexAlignment.Fill;
                         Padding = dim(0, 10);
                         FillDirection = Enum.FillDirection.Vertical;
                         SortOrder = Enum.SortOrder.LayoutOrder
                     });
-
-                    local function measure()
-                        items[ "column" ].CanvasSize = dim2(0, 0, 0, layout.AbsoluteContentSize.Y + 12)
-                    end
-
-                    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(measure)
-                    measure()
                 end 
 
                 return setmetatable(cfg, library)
@@ -1396,19 +1369,11 @@ end
             };
             
             local items = cfg.items; do 
-                -- ============================================================
-                --  Card height
-                --  Was dim2(0, 0, cfg.size, -3) -- a fixed fraction of the
-                --  column, leaving empty space under the content when a card
-                --  held few elements.
-                --  Now AutomaticSize.Y: it grows and shrinks with content.
-                -- ============================================================
                 items[ "outline" ] = library:create( "Frame" , {
                     Name = "\0";
                     Parent = self.items[ "column" ];
                     BorderColor3 = rgb(0, 0, 0);
-                    Size = dim2(1, 0, 0, 0);
-                    AutomaticSize = Enum.AutomaticSize.Y;
+                    Size = dim2(0, 0, cfg.size, -3);
                     BorderSizePixel = 0;
                     BackgroundColor3 = rgb(25, 25, 29)
                 });
@@ -1423,8 +1388,7 @@ end
                     Name = "\0";
                     Position = dim2(0, 1, 0, 1);
                     BorderColor3 = rgb(0, 0, 0);
-                    Size = dim2(1, -2, 0, 0);
-                    AutomaticSize = Enum.AutomaticSize.Y;
+                    Size = dim2(1, -2, 1, -2);
                     BorderSizePixel = 0;
                     BackgroundColor3 = rgb(22, 22, 24)
                 });
@@ -1434,18 +1398,20 @@ end
                     CornerRadius = dim(0, 7)
                 });
                 
-                -- Was a fixed-height ScrollingFrame. Now a Frame that grows;
-                -- scrolling moved up to the column itself.
-                items[ "scrolling" ] = library:create( "Frame" , {
+                items[ "scrolling" ] = library:create( "ScrollingFrame" , {
+                    ScrollBarImageColor3 = rgb(44, 44, 46);
+                    Active = true;
+                    AutomaticCanvasSize = Enum.AutomaticSize.Y;
+                    ScrollBarThickness = 2;
                     Parent = items[ "inline" ];
                     Name = "\0";
-                    Size = dim2(1, 0, 0, 0);
-                    AutomaticSize = Enum.AutomaticSize.Y;
+                    Size = dim2(1, 0, 1, -40);
                     BackgroundTransparency = 1;
                     Position = dim2(0, 0, 0, 35);
                     BackgroundColor3 = rgb(255, 255, 255);
                     BorderColor3 = rgb(0, 0, 0);
                     BorderSizePixel = 0;
+                    CanvasSize = dim2(0, 0, 0, 0)
                 });
                 
                 items[ "elements" ] = library:create( "Frame" , {
