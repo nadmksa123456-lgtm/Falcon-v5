@@ -1301,13 +1301,20 @@ end
                 local cfg = {items = {}, size = properties.size or 1}
 
                 local items = cfg.items; do     
-                    items[ "column" ] = library:create( "Frame" , {
+                    -- Scrollable column: cards now grow with their content,
+                    -- so their total height can exceed the window.
+                    items[ "column" ] = library:create( "ScrollingFrame" , {
                         Parent = self[ "parent" ] or self.items["tab_parent"];
                         BackgroundTransparency = 1;
                         Name = "\0";
                         BorderColor3 = rgb(0, 0, 0);
                         Size = dim2(0, 0, cfg.size, 0);
                         BorderSizePixel = 0;
+                        Active = true;
+                        AutomaticCanvasSize = Enum.AutomaticSize.Y;
+                        CanvasSize = dim2(0, 0, 0, 0);
+                        ScrollBarThickness = 2;
+                        ScrollBarImageColor3 = rgb(44, 44, 46);
                         BackgroundColor3 = rgb(255, 255, 255)
                     });
                     
@@ -1369,11 +1376,19 @@ end
             };
             
             local items = cfg.items; do 
+                -- ============================================================
+                --  Card height
+                --  Was dim2(0, 0, cfg.size, -3) -- a fixed fraction of the
+                --  column, leaving empty space under the content when a card
+                --  held few elements.
+                --  Now AutomaticSize.Y: it grows and shrinks with content.
+                -- ============================================================
                 items[ "outline" ] = library:create( "Frame" , {
                     Name = "\0";
                     Parent = self.items[ "column" ];
                     BorderColor3 = rgb(0, 0, 0);
-                    Size = dim2(0, 0, cfg.size, -3);
+                    Size = dim2(1, 0, 0, 0);
+                    AutomaticSize = Enum.AutomaticSize.Y;
                     BorderSizePixel = 0;
                     BackgroundColor3 = rgb(25, 25, 29)
                 });
@@ -1388,7 +1403,8 @@ end
                     Name = "\0";
                     Position = dim2(0, 1, 0, 1);
                     BorderColor3 = rgb(0, 0, 0);
-                    Size = dim2(1, -2, 1, -2);
+                    Size = dim2(1, -2, 0, 0);
+                    AutomaticSize = Enum.AutomaticSize.Y;
                     BorderSizePixel = 0;
                     BackgroundColor3 = rgb(22, 22, 24)
                 });
@@ -1398,20 +1414,18 @@ end
                     CornerRadius = dim(0, 7)
                 });
                 
-                items[ "scrolling" ] = library:create( "ScrollingFrame" , {
-                    ScrollBarImageColor3 = rgb(44, 44, 46);
-                    Active = true;
-                    AutomaticCanvasSize = Enum.AutomaticSize.Y;
-                    ScrollBarThickness = 2;
+                -- Was a fixed-height ScrollingFrame. Now a Frame that grows;
+                -- scrolling moved up to the column itself.
+                items[ "scrolling" ] = library:create( "Frame" , {
                     Parent = items[ "inline" ];
                     Name = "\0";
-                    Size = dim2(1, 0, 1, -40);
+                    Size = dim2(1, 0, 0, 0);
+                    AutomaticSize = Enum.AutomaticSize.Y;
                     BackgroundTransparency = 1;
                     Position = dim2(0, 0, 0, 35);
                     BackgroundColor3 = rgb(255, 255, 255);
                     BorderColor3 = rgb(0, 0, 0);
                     BorderSizePixel = 0;
-                    CanvasSize = dim2(0, 0, 0, 0)
                 });
                 
                 items[ "elements" ] = library:create( "Frame" , {
@@ -3843,6 +3857,22 @@ end
             })
 
             section:colorpicker({name = "Menu Accent", callback = function(color, alpha) library:update_theme("accent", color) end, color = themes.preset.accent})
+
+            -- Presets recolour the whole menu: logo, icons and toggles
+            local Presets = {
+                { "Blue",   rgb(0, 162, 255) },
+                { "Red",    rgb(255, 60, 60) },
+                { "Green",  rgb(60, 220, 130) },
+                { "Purple", rgb(160, 110, 255) },
+                { "Orange", rgb(255, 150, 40) },
+                { "White",  rgb(240, 240, 240) },
+            }
+
+            for _, Preset in Presets do
+                section:button({name = Preset[1], callback = function()
+                    library:update_theme("accent", Preset[2])
+                end})
+            end
 
             section:keybind({name = "Menu Bind", key = Enum.KeyCode.Insert, callback = function(bool) window.toggle_menu(bool) end, seperator = true, default = true})
 
