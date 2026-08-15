@@ -1301,8 +1301,19 @@ end
                 local cfg = {items = {}, size = properties.size or 1}
 
                 local items = cfg.items; do     
-                    -- Scrollable column: cards now grow with their content,
-                    -- so their total height can exceed the window.
+                    -- ====================================================
+                    --  Scrollable column
+                    --
+                    --  Cards grow with their content, so a column can run
+                    --  past the bottom of the window and must scroll.
+                    --
+                    --  AutomaticCanvasSize stalls here: it measures the
+                    --  canvas before the AutomaticSize cards finish growing
+                    --  and never re-measures, so CanvasSize stays at 0 and
+                    --  the mouse wheel does nothing.
+                    --  Driving CanvasSize from the layout's own measurement
+                    --  is deterministic and updates on every content change.
+                    -- ====================================================
                     items[ "column" ] = library:create( "ScrollingFrame" , {
                         Parent = self[ "parent" ] or self.items["tab_parent"];
                         BackgroundTransparency = 1;
@@ -1311,25 +1322,34 @@ end
                         Size = dim2(0, 0, cfg.size, 0);
                         BorderSizePixel = 0;
                         Active = true;
-                        AutomaticCanvasSize = Enum.AutomaticSize.Y;
+                        ScrollingEnabled = true;
+                        ScrollingDirection = Enum.ScrollingDirection.Y;
+                        ElasticBehavior = Enum.ElasticBehavior.Never;
                         CanvasSize = dim2(0, 0, 0, 0);
-                        ScrollBarThickness = 2;
+                        ScrollBarThickness = 4;
                         ScrollBarImageColor3 = rgb(44, 44, 46);
                         BackgroundColor3 = rgb(255, 255, 255)
                     });
-                    
+
                     library:create( "UIPadding" , {
                         PaddingBottom = dim(0, 10);
                         Parent = items[ "column" ]
                     });
-                    
-                    library:create( "UIListLayout" , {
+
+                    local layout = library:create( "UIListLayout" , {
                         Parent = items[ "column" ];
                         HorizontalFlex = Enum.UIFlexAlignment.Fill;
                         Padding = dim(0, 10);
                         FillDirection = Enum.FillDirection.Vertical;
                         SortOrder = Enum.SortOrder.LayoutOrder
                     });
+
+                    local function measure()
+                        items[ "column" ].CanvasSize = dim2(0, 0, 0, layout.AbsoluteContentSize.Y + 12)
+                    end
+
+                    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(measure)
+                    measure()
                 end 
 
                 return setmetatable(cfg, library)
@@ -3857,22 +3877,6 @@ end
             })
 
             section:colorpicker({name = "Menu Accent", callback = function(color, alpha) library:update_theme("accent", color) end, color = themes.preset.accent})
-
-            -- Presets recolour the whole menu: logo, icons and toggles
-            local Presets = {
-                { "Blue",   rgb(0, 162, 255) },
-                { "Red",    rgb(255, 60, 60) },
-                { "Green",  rgb(60, 220, 130) },
-                { "Purple", rgb(160, 110, 255) },
-                { "Orange", rgb(255, 150, 40) },
-                { "White",  rgb(240, 240, 240) },
-            }
-
-            for _, Preset in Presets do
-                section:button({name = Preset[1], callback = function()
-                    library:update_theme("accent", Preset[2])
-                end})
-            end
 
             section:keybind({name = "Menu Bind", key = Enum.KeyCode.Insert, callback = function(bool) window.toggle_menu(bool) end, seperator = true, default = true})
 
