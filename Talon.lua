@@ -36,7 +36,7 @@ getgenv().library = {
 local library = getgenv().library
 
 -- ---------------------------------------------------------------- الايقونات
-local Images = {"ESP.png", "World.png", "Wrench.png", "Settings.png", "Node.png", "cursor.png", "Bullet.png", "Snapline.png", "Pistol.png", "folder.png", "UZI.png", "FieldOfView2.png", "Lock.png", "Aimlock.png", "Cash.png", "Wheatt.png", "Pickkaxe.png", "unlocked.png"}
+local Images = {"Talon.png", "ESP.png", "World.png", "Wrench.png", "Settings.png", "Node.png", "cursor.png", "Bullet.png", "Snapline.png", "Pistol.png", "folder.png", "UZI.png", "FieldOfView2.png", "Lock.png", "Aimlock.png", "Cash.png", "Wheatt.png", "Pickkaxe.png", "unlocked.png"}
 
 local IMAGE_BASE = "https://raw.githubusercontent.com/nadmksa123456-lgtm/Falcon-v5/main/assets/"
 
@@ -4051,34 +4051,12 @@ end
     --end)()
 
 -- ============================================================================
---  اعدادات الشعار
---  غيّر الرابط الى شعارك في مستودعك. يُنزّل مرة واحدة ويُحفظ محليا.
---  اجعله ابيض على خلفية شفافة: المكتبة تصبغه بلون القائمة المميز.
--- ============================================================================
-local LOGO_URL  = "https://raw.githubusercontent.com/nadmksa123456-lgtm/Falcon-v5/main/Talon.png"
-local LOGO_NAME = "Talon.png"
-
-do
-    local Location = library.directory .. "/assets/" .. LOGO_NAME
-
-    if not isfile(Location) then
-        pcall(function()
-            local Data = game:HttpGet(LOGO_URL)
-
-            if type(Data) == "string" and #Data > 0 then
-                writefile(Location, Data)
-            end
-        end)
-    end
-end
-
--- ============================================================================
 --  القائمة
 -- ============================================================================
 local window = library:window({
     name = "Talon",
     suffix = "",
-    logo = LOGO_NAME,
+    logo = "Talon.png",
     size = UDim2.new(0, 700, 0, 565),
 })
 
