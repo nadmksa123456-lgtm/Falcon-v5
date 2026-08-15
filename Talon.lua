@@ -11,6 +11,20 @@
         local window  = library:window({name = "bronx", suffix = ".lol"})
 --]]
 
+-- ============================================================================
+--  ماكروات Luraph
+--  المكتبة الاصلية كانت جزءا من سكربت مشفّر يعرّف هذي الماكروات في اعلاه.
+--  بدونها ينهار اول استدعاء:  LPH_NO_VIRTUALIZE(...) = attempt to call a nil value
+--  (كان يقع في library:draggify فتظهر النافذة فارغة وجامدة).
+--  هنا نعرّفها كدوال هوية لان النسخة غير مشفّرة.
+-- ============================================================================
+LPH_NO_VIRTUALIZE = LPH_NO_VIRTUALIZE or function(f) return f end
+LPH_JIT           = LPH_JIT           or function(f) return f end
+LPH_JIT_MAX       = LPH_JIT_MAX       or function(f) return f end
+LPH_NO_UPVALUES   = LPH_NO_UPVALUES   or function(f) return f end
+LPH_ENCSTR        = LPH_ENCSTR        or function(v) return v end
+LPH_ENCNUM        = LPH_ENCNUM        or function(v) return v end
+
 local cloneref = cloneref or function(...) return ... end
 
 local Services = setmetatable({}, {
@@ -659,9 +673,9 @@ end
                     Parent = items[ "side_frame" ];
                     Name = "\0";
                     BackgroundTransparency = 1;
-                    Position = dim2(0, 0, 0, 60);
+                    Position = dim2(0, 0, 0, 120);
                     BorderColor3 = rgb(0, 0, 0);
-                    Size = dim2(1, 0, 1, -60);
+                    Size = dim2(1, 0, 1, -120);
                     BorderSizePixel = 0;
                     BackgroundColor3 = rgb(255, 255, 255)
                 }); cfg.button_holder = items[ "button_holder" ];
@@ -691,14 +705,26 @@ end
                 -- ============================================================
                 local Logo = GetImage(cfg.logo)
 
+                -- بلوك الشعار: ارتفاع ثابت 120 اعلى الشريط الجانبي
+                items[ "logo_holder" ] = library:create( "Frame" , {
+                    Parent = items[ "side_frame" ];
+                    Name = "\0";
+                    BackgroundTransparency = 1;
+                    BorderSizePixel = 0;
+                    Position = dim2(0, 0, 0, 0);
+                    Size = dim2(1, 0, 0, 120);
+                    BackgroundColor3 = rgb(14, 14, 16)
+                });
+
                 if Logo then
                     items[ "title" ] = library:create( "ImageLabel" , {
-                        Parent = items[ "side_frame" ];
+                        Parent = items[ "logo_holder" ];
                         Name = "\0";
                         BackgroundTransparency = 1;
                         BorderSizePixel = 0;
-                        Size = dim2(1, -40, 0, 70);
-                        Position = dim2(0, 20, 0, 0);
+                        AnchorPoint = vec2(0.5, 0.5);
+                        Position = dim2(0.5, 0, 0.5, 0);
+                        Size = dim2(0, 104, 0, 104);
                         Image = Logo;
                         ImageColor3 = themes.preset.accent;
                         ScaleType = Enum.ScaleType.Fit;
@@ -708,11 +734,11 @@ end
                     items[ "title" ] = library:create( "TextLabel" , {
                         FontFace = fonts.font;
                         BorderColor3 = rgb(0, 0, 0);
-                        Parent = items[ "side_frame" ];
+                        Parent = items[ "logo_holder" ];
                         Name = "\0";
                         Text = string.format('<u>%s</u><font color = "rgb(255, 255, 255)">%s</font>', cfg.name, cfg.suffix);
                         BackgroundTransparency = 1;
-                        Size = dim2(1, 0, 0, 70);
+                        Size = dim2(1, 0, 1, 0);
                         TextColor3 = themes.preset.accent;
                         BorderSizePixel = 0;
                         RichText = true;
@@ -813,6 +839,64 @@ end
             do -- Other
                 library:draggify(items[ "main" ])
                 library:resizify(items[ "main" ])
+            end
+
+            -- ================================================================
+            --  زر الاظهار/الاخفاء
+            --  في ScreenGui منفصل عمدا: toggle_menu يعطل library["items"]
+            --  كاملة، فلو كان الزر داخلها لاختفى معها ولم يعد بالامكان
+            --  ارجاع القائمة الا بمفتاح Insert.
+            -- ================================================================
+            library[ "toggle_gui" ] = library:create( "ScreenGui" , {
+                Parent = gethui and gethui() or Services.CoreGui;
+                Name = "\0";
+                Enabled = true;
+                ZIndexBehavior = Enum.ZIndexBehavior.Global;
+                IgnoreGuiInset = true;
+            });
+
+            items[ "toggle_button" ] = library:create( "TextButton" , {
+                Parent = library[ "toggle_gui" ];
+                Name = "\0";
+                AnchorPoint = vec2(0, 1);
+                Position = dim2(0, 20, 1, -20);
+                Size = dim2(0, 116, 0, 40);
+                BackgroundColor3 = rgb(25, 25, 29);
+                AutoButtonColor = false;
+                BorderSizePixel = 0;
+                Text = "";
+            });
+
+            library:create( "UICorner" , {
+                Parent = items[ "toggle_button" ];
+                CornerRadius = dim(0, 8)
+            });
+
+            library:create( "UIStroke" , {
+                Color = themes.preset.accent;
+                Parent = items[ "toggle_button" ];
+                Thickness = 1;
+                ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+            });
+
+            items[ "toggle_label" ] = library:create( "TextLabel" , {
+                Parent = items[ "toggle_button" ];
+                Name = "\0";
+                FontFace = fonts.font;
+                Text = "MENU";
+                TextColor3 = themes.preset.accent;
+                BackgroundTransparency = 1;
+                Size = dim2(1, 0, 1, 0);
+                BorderSizePixel = 0;
+                TextSize = 15;
+            }); library:apply_theme(items[ "toggle_label" ], "accent", "TextColor3");
+
+            items[ "toggle_button" ].MouseButton1Click:Connect(function()
+                cfg.toggle_menu(not library[ "items" ].Enabled)
+            end)
+
+            function cfg.set_toggle_button(State)
+                library[ "toggle_gui" ].Enabled = State and true or false
             end 
 
             function cfg.toggle_menu(bool) 
@@ -4058,7 +4142,6 @@ local function STEP(Name)
 end
 
 STEP("1 library loaded")
-STEP("2 window")
 
 local window = library:window({
     name = "Talon",
@@ -4067,16 +4150,18 @@ local window = library:window({
     size = UDim2.new(0, 700, 0, 565),
 })
 
+STEP("2 window")
+
 -- ---------------------------------------------------------------- Game
 window:seperator({ name = "Game" })
-
-STEP("3 main tab")
 
 local LocalPlayerTab, PlayersTab, TeleportsTab = window:tab({
     name = "Main",
     tabs = { "Local Player", "Players", "Teleports" },
     icon = GetImage("World.png"),
 })
+
+STEP("3 main tab")
 
 do
     local Column = LocalPlayerTab:column({})
@@ -4152,9 +4237,9 @@ end
 -- ---------------------------------------------------------------- Combat
 window:seperator({ name = "Combat" })
 
-STEP("4 silent tab")
-
 local SilentTab = window:tab({ name = "Silent Aim", tabs = { "General Settings" }, icon = GetImage("Pistol.png") })
+
+STEP("4 silent tab")
 
 do
     local Column = SilentTab:column({})
@@ -4187,9 +4272,9 @@ do
     Snap:slider({ name = "Snapline Thickness", flag = "SnapThick", min = 1, max = 5, default = 1 })
 end
 
-STEP("5 aimlock tab")
-
 local AimlockTab = window:tab({ name = "Aimlock", tabs = { "General Settings" }, icon = GetImage("Aimlock.png") })
+
+STEP("5 aimlock tab")
 
 do
     local Column = AimlockTab:column({})
@@ -4208,9 +4293,9 @@ end
 -- ---------------------------------------------------------------- World
 window:seperator({ name = "World" })
 
-STEP("6 visuals tab")
-
 local VisualsTab = window:tab({ name = "Visuals", tabs = { "Players" }, icon = GetImage("ESP.png") })
+
+STEP("6 visuals tab")
 
 do
     local Column = VisualsTab:column({})
@@ -4233,13 +4318,91 @@ do
     Set:slider({ name = "Max Render Distance", flag = "Render", min = 10, max = 5000, default = 1000, suffix = "st" })
 end
 
--- ---------------------------------------------------------------- Settings
-STEP("7 config")
+-- ---------------------------------------------------------------- Menu
+window:seperator({ name = "Menu" })
 
+local MenuTab = window:tab({ name = "Customize", tabs = { "Appearance" }, icon = GetImage("Settings.png") })
+
+STEP("7 customize tab")
+
+do
+    local Column = MenuTab:column({})
+    local Colors = Column:section({ name = "Menu Color", side = "left", size = 0.55, icon = GetImage("Node.png") })
+
+    Colors:label({ name = "يغير لون القائمة كاملا: الشعار، الايقونات، التوغلات، السلايدرات.", wrapped = true })
+
+    Colors:colorpicker({
+        flag = "MenuAccent",
+        color = Color3.fromRGB(0, 162, 255),
+        alpha = 1,
+        callback = function(Color)
+            library:update_theme("accent", Color)
+        end
+    })
+
+    local Presets = {
+        { "Blue",   Color3.fromRGB(0, 162, 255) },
+        { "Red",    Color3.fromRGB(255, 60, 60) },
+        { "Green",  Color3.fromRGB(60, 220, 130) },
+        { "Purple", Color3.fromRGB(160, 110, 255) },
+        { "Orange", Color3.fromRGB(255, 150, 40) },
+        { "White",  Color3.fromRGB(240, 240, 240) },
+    }
+
+    for _, Preset in Presets do
+        Colors:button({ name = Preset[1], callback = function()
+            library:update_theme("accent", Preset[2])
+        end})
+    end
+
+    local Right = MenuTab:column({})
+    local Control = Right:section({ name = "Menu Control", side = "right", size = 0.45, icon = GetImage("Wrench.png") })
+
+    Control:toggle({
+        name = "Show MENU Button",
+        flag = "ShowToggleButton",
+        type = "toggle",
+        default = true,
+        callback = function(State)
+            window.set_toggle_button(State)
+        end
+    })
+
+    Control:keybind({
+        name = "Menu Keybind",
+        flag = "MenuKey",
+        key = Enum.KeyCode.Insert,
+        mode = "Toggle",
+        default = true,
+        callback = function(State)
+            window.toggle_menu(State)
+        end
+    })
+
+    Control:button({ name = "Hide Menu", callback = function()
+        window.toggle_menu(false)
+    end})
+
+    Control:label({ name = "زر MENU اسفل يسار الشاشة يظهر القائمة مرة اخرى.", wrapped = true })
+
+    local Unload = Right:section({ name = "Danger", side = "right", size = 0.3, icon = GetImage("unlocked.png") })
+
+    Unload:button({ name = "Unload Menu", callback = function()
+        if library.toggle_gui then
+            library.toggle_gui:Destroy()
+        end
+
+        library:unload_menu()
+    end})
+end
+
+-- ---------------------------------------------------------------- Settings
 library:init_config(window)
+
+STEP("8 config")
 
 library.notifications:create_notification({
     name = "Talon",
-    info = "menu loaded - press Insert to toggle",
+    info = "menu loaded - Insert or MENU button to toggle",
     lifetime = 6,
 })
