@@ -1,15 +1,29 @@
 --[[
-    bronx.lol  |  UI Library  (standalone)
-    مستخرجة من  South_Bronx_ONLY.lua   الاسطر 4790-8776
+    Talon  |  UI Library  (standalone)
 
-    المتطلبات من المنفذ:
+    Executor requirements:
         getcustomasset · writefile · readfile · isfile · delfile
-        makefolder · listfiles · gethui (اختياري) · cloneref (اختياري)
+        makefolder · listfiles · gethui (optional) · cloneref (optional)
 
-    الاستعمال:
-        local library = loadstring(readfile("bronx_ui/library.lua"))()
-        local window  = library:window({name = "bronx", suffix = ".lol"})
+    Usage:
+        local library = loadstring(readfile("library.lua"))()
+        local window  = library:window({name = "Talon", logo = "Talon.png"})
 --]]
+
+-- ============================================================================
+--  Luraph macros
+--  The original library was part of an obfuscated script that defined these
+--  above it. Without them the first call fails:
+--      LPH_NO_VIRTUALIZE(...) = attempt to call a nil value
+--  (it hit library:draggify, leaving the window blank and frozen).
+--  Defined here as identity functions since this build is not obfuscated.
+-- ============================================================================
+LPH_NO_VIRTUALIZE = LPH_NO_VIRTUALIZE or function(f) return f end
+LPH_JIT           = LPH_JIT           or function(f) return f end
+LPH_JIT_MAX       = LPH_JIT_MAX       or function(f) return f end
+LPH_NO_UPVALUES   = LPH_NO_UPVALUES   or function(f) return f end
+LPH_ENCSTR        = LPH_ENCSTR        or function(v) return v end
+LPH_ENCNUM        = LPH_ENCNUM        or function(v) return v end
 
 local cloneref = cloneref or function(...) return ... end
 
@@ -19,10 +33,15 @@ local Services = setmetatable({}, {
     end
 })
 
+-- The library body uses RunService as a global (it was defined in the
+-- original script). Without it: attempt to index nil with 'RenderStepped'
+-- inside library:window
+RunService = Services.RunService
+
 local Mobile = Services.UserInputService.TouchEnabled
 
 getgenv().library = {
-    directory = "bronx.lol_remastered",
+    directory = "Talon",
     folders = { "/fonts", "/configs", "/assets" },
     priority = {},
     whitelist = {},
@@ -35,35 +54,98 @@ getgenv().library = {
 
 local library = getgenv().library
 
--- ---------------------------------------------------------------- الايقونات
-local Images = {"ESP.png", "World.png", "Wrench.png", "Settings.png", "Node.png", "cursor.png", "Bullet.png", "Snapline.png", "Pistol.png", "folder.png", "UZI.png", "FieldOfView2.png", "Lock.png", "Aimlock.png", "Cash.png", "Wheatt.png", "Pickkaxe.png", "unlocked.png"}
+-- ------------------------------------------------------------------- Icons
+local Images = {"Talon.png", "ESP.png", "World.png", "Wrench.png", "Settings.png", "Node.png", "cursor.png", "Bullet.png", "Snapline.png", "Pistol.png", "folder.png", "UZI.png", "FieldOfView2.png", "Lock.png", "Aimlock.png", "Cash.png", "Wheatt.png", "Pickkaxe.png", "unlocked.png"}
 
-local IMAGE_BASE = "https://raw.githubusercontent.com/KingVonOBlockJoyce/imagessynex/main/"
+local IMAGE_BASE = "https://raw.githubusercontent.com/nadmksa123456-lgtm/Falcon-v5/main/assets/"
 
 for _, path in next, library.folders do
     pcall(makefolder, library.directory .. path)
 end
 
+-- ============================================================================
+--  Icon download with file validation
+--
+--  The original wrote any non-empty text response. When a URL failed, GitHub
+--  returned "404: Not Found", which got saved as a corrupt PNG. isfile then
+--  found it on every later run, so it never re-downloaded and the icon was
+--  missing forever.
+--  Here we check the PNG signature and delete anything left by a failed
+--  earlier download.
+-- ============================================================================
+local function Valid_PNG(Data)
+    return type(Data) == "string"
+        and #Data > 8
+        and string.byte(Data, 1) == 137
+        and string.sub(Data, 2, 4) == "PNG"
+end
+
 for Index, Value in Images do
     local Location = library.directory .. "/assets/" .. Value
+    local Ready = false
 
-    if not isfile(Location) then
+    if isfile(Location) then
+        Ready = Valid_PNG(readfile(Location))
+
+        if not Ready then
+            pcall(delfile, Location)
+        end
+    end
+
+    if not Ready then
         pcall(function()
             local Data = game:HttpGet(IMAGE_BASE .. Value)
 
-            if type(Data) == "string" and #Data > 0 then
+            if Valid_PNG(Data) then
                 writefile(Location, Data)
+            else
+                warn("[Talon] bad image: " .. Value)
             end
         end)
     end
 end
 
-function GetImage(Name)
-    local Location = library.directory .. "/assets/" .. Name
+-- ============================================================================
+--  GetImage
+--
+--  On-demand download: just upload the image to the repo's assets folder --
+--  no need to add it to the Images list above. The first call fetches and
+--  caches it; every call after reads it locally.
+--
+--  Failed names are cached so a missing image is not re-requested on every
+--  element build.
+-- ============================================================================
+local Image_Cache = {}
 
-    if isfile(Location) then
-        return getcustomasset(Location)
+function GetImage(Name)
+    if Image_Cache[Name] ~= nil then
+        return Image_Cache[Name] or nil
     end
+
+    local Location = library.directory .. "/assets/" .. Name
+    local Ready = isfile(Location) and Valid_PNG(readfile(Location))
+
+    if not Ready then
+        pcall(function()
+            local Data = game:HttpGet(IMAGE_BASE .. Name)
+
+            if Valid_PNG(Data) then
+                writefile(Location, Data)
+                Ready = true
+            end
+        end)
+    end
+
+    if not Ready then
+        warn("[Talon] image not found: " .. Name)
+        Image_Cache[Name] = false
+        return nil
+    end
+
+    local Asset = getcustomasset(Location)
+    Image_Cache[Name] = Asset
+
+    return Asset
 end
 
 if not LRM_SecondsLeft then
@@ -71,7 +153,7 @@ if not LRM_SecondsLeft then
 end
 
 -- ============================================================================
---  جسم المكتبة
+--  Library body
 -- ============================================================================
 --LPH_JIT_MAX(function()
     local uis = Services.UserInputService
@@ -240,8 +322,8 @@ end
             return getcustomasset(Name .. ".font");
         end
         
-        -- خطوط القائمة نفسها. فشل التنزيل هنا كان يمنع ظهور القائمة
-        -- كليا، لذلك نرجع الى خط مدمج بدل التوقف.
+        -- The menu's own fonts. A download failure here used to stop the
+        -- menu appearing at all, so we fall back to a built-in font.
         local function Try(Name, Id, Url)
             local Ok, Result = pcall(function()
                 return Register_Font(Name, 200, "Normal", {
@@ -251,7 +333,7 @@ end
             end)
 
             if not Ok or not Result then
-                warn("[bronx.lol] menu font failed: " .. Name)
+                warn("[Talon] menu font failed: " .. Name)
                 return nil
             end
 
@@ -659,9 +741,9 @@ end
                     Parent = items[ "side_frame" ];
                     Name = "\0";
                     BackgroundTransparency = 1;
-                    Position = dim2(0, 0, 0, 60);
+                    Position = dim2(0, 0, 0, 92);
                     BorderColor3 = rgb(0, 0, 0);
-                    Size = dim2(1, 0, 1, -60);
+                    Size = dim2(1, 0, 1, -92);
                     BorderSizePixel = 0;
                     BackgroundColor3 = rgb(255, 255, 255)
                 }); cfg.button_holder = items[ "button_holder" ];
@@ -673,7 +755,7 @@ end
                 });
                 
                 library:create( "UIPadding" , {
-                    PaddingTop = dim(0, 16);
+                    PaddingTop = dim(0, 4);
                     PaddingBottom = dim(0, 36);
                     Parent = items[ "button_holder" ];
                     PaddingRight = dim(0, 11);
@@ -683,22 +765,34 @@ end
                 local accent = themes.preset.accent
 
                 -- ============================================================
-                --  الشعار
-                --  يقرأ  assets/Talon.png  ويلوّنه بلون القائمة المميز، فيتغير
-                --  معه تلقائيا عند تبديل اللون من الاعدادات.
-                --  اذا لم يوجد الملف يعود الى العنوان النصي حتى لا تظهر
-                --  القائمة بمساحة فارغة.
+                --  Logo
+                --  Reads assets/Talon.png and tints it with the menu accent,
+                --  so it follows the colour picked in Settings.
+                --  Falls back to the text title if the file is missing, so
+                --  the menu never shows an empty block.
                 -- ============================================================
                 local Logo = GetImage(cfg.logo)
 
+                -- Logo block: fixed height at the top of the sidebar
+                items[ "logo_holder" ] = library:create( "Frame" , {
+                    Parent = items[ "side_frame" ];
+                    Name = "\0";
+                    BackgroundTransparency = 1;
+                    BorderSizePixel = 0;
+                    Position = dim2(0, 0, 0, 0);
+                    Size = dim2(1, 0, 0, 92);
+                    BackgroundColor3 = rgb(14, 14, 16)
+                });
+
                 if Logo then
                     items[ "title" ] = library:create( "ImageLabel" , {
-                        Parent = items[ "side_frame" ];
+                        Parent = items[ "logo_holder" ];
                         Name = "\0";
                         BackgroundTransparency = 1;
                         BorderSizePixel = 0;
-                        Size = dim2(1, -40, 0, 70);
-                        Position = dim2(0, 20, 0, 0);
+                        AnchorPoint = vec2(0.5, 0.5);
+                        Position = dim2(0.5, 0, 0.5, 0);
+                        Size = dim2(0, 80, 0, 80);
                         Image = Logo;
                         ImageColor3 = themes.preset.accent;
                         ScaleType = Enum.ScaleType.Fit;
@@ -708,11 +802,11 @@ end
                     items[ "title" ] = library:create( "TextLabel" , {
                         FontFace = fonts.font;
                         BorderColor3 = rgb(0, 0, 0);
-                        Parent = items[ "side_frame" ];
+                        Parent = items[ "logo_holder" ];
                         Name = "\0";
                         Text = string.format('<u>%s</u><font color = "rgb(255, 255, 255)">%s</font>', cfg.name, cfg.suffix);
                         BackgroundTransparency = 1;
-                        Size = dim2(1, 0, 0, 70);
+                        Size = dim2(1, 0, 1, 0);
                         TextColor3 = themes.preset.accent;
                         BorderSizePixel = 0;
                         RichText = true;
@@ -803,17 +897,20 @@ end
                 });
                 
                 -- ============================================================
-                --  الشريط السفلي
-                --  حُذف نصّا  "bronx.lol : <game>"  و  "lifetime, bronx.lol"
-                --  بناء على الطلب. الشريط نفسه باق لانه يكمل الزاوية السفلية
-                --  المدورة للنافذة.
+                --  Bottom bar
+                --  The original bottom-bar texts were removed on request.
+                --  The bar itself stays because it completes the window's
+                --  rounded bottom corners.
                 -- ============================================================
             end 
 
             do -- Other
                 library:draggify(items[ "main" ])
                 library:resizify(items[ "main" ])
-            end 
+            end
+
+            -- The floating MENU button was removed on request.
+            -- Show/hide is bound to Insert (rebindable in Settings).
 
             function cfg.toggle_menu(bool) 
                 -- WIP 
@@ -1204,13 +1301,20 @@ end
                 local cfg = {items = {}, size = properties.size or 1}
 
                 local items = cfg.items; do     
-                    items[ "column" ] = library:create( "Frame" , {
+                    -- Scrollable column: cards now grow with their content,
+                    -- so their total height can exceed the window.
+                    items[ "column" ] = library:create( "ScrollingFrame" , {
                         Parent = self[ "parent" ] or self.items["tab_parent"];
                         BackgroundTransparency = 1;
                         Name = "\0";
                         BorderColor3 = rgb(0, 0, 0);
                         Size = dim2(0, 0, cfg.size, 0);
                         BorderSizePixel = 0;
+                        Active = true;
+                        AutomaticCanvasSize = Enum.AutomaticSize.Y;
+                        CanvasSize = dim2(0, 0, 0, 0);
+                        ScrollBarThickness = 2;
+                        ScrollBarImageColor3 = rgb(44, 44, 46);
                         BackgroundColor3 = rgb(255, 255, 255)
                     });
                     
@@ -1272,11 +1376,19 @@ end
             };
             
             local items = cfg.items; do 
+                -- ============================================================
+                --  Card height
+                --  Was dim2(0, 0, cfg.size, -3) -- a fixed fraction of the
+                --  column, leaving empty space under the content when a card
+                --  held few elements.
+                --  Now AutomaticSize.Y: it grows and shrinks with content.
+                -- ============================================================
                 items[ "outline" ] = library:create( "Frame" , {
                     Name = "\0";
                     Parent = self.items[ "column" ];
                     BorderColor3 = rgb(0, 0, 0);
-                    Size = dim2(0, 0, cfg.size, -3);
+                    Size = dim2(1, 0, 0, 0);
+                    AutomaticSize = Enum.AutomaticSize.Y;
                     BorderSizePixel = 0;
                     BackgroundColor3 = rgb(25, 25, 29)
                 });
@@ -1291,7 +1403,8 @@ end
                     Name = "\0";
                     Position = dim2(0, 1, 0, 1);
                     BorderColor3 = rgb(0, 0, 0);
-                    Size = dim2(1, -2, 1, -2);
+                    Size = dim2(1, -2, 0, 0);
+                    AutomaticSize = Enum.AutomaticSize.Y;
                     BorderSizePixel = 0;
                     BackgroundColor3 = rgb(22, 22, 24)
                 });
@@ -1301,20 +1414,18 @@ end
                     CornerRadius = dim(0, 7)
                 });
                 
-                items[ "scrolling" ] = library:create( "ScrollingFrame" , {
-                    ScrollBarImageColor3 = rgb(44, 44, 46);
-                    Active = true;
-                    AutomaticCanvasSize = Enum.AutomaticSize.Y;
-                    ScrollBarThickness = 2;
+                -- Was a fixed-height ScrollingFrame. Now a Frame that grows;
+                -- scrolling moved up to the column itself.
+                items[ "scrolling" ] = library:create( "Frame" , {
                     Parent = items[ "inline" ];
                     Name = "\0";
-                    Size = dim2(1, 0, 1, -40);
+                    Size = dim2(1, 0, 0, 0);
+                    AutomaticSize = Enum.AutomaticSize.Y;
                     BackgroundTransparency = 1;
                     Position = dim2(0, 0, 0, 35);
                     BackgroundColor3 = rgb(255, 255, 255);
                     BorderColor3 = rgb(0, 0, 0);
                     BorderSizePixel = 0;
-                    CanvasSize = dim2(0, 0, 0, 0)
                 });
                 
                 items[ "elements" ] = library:create( "Frame" , {
@@ -3746,6 +3857,23 @@ end
             })
 
             section:colorpicker({name = "Menu Accent", callback = function(color, alpha) library:update_theme("accent", color) end, color = themes.preset.accent})
+
+            -- Presets recolour the whole menu: logo, icons and toggles
+            local Presets = {
+                { "Blue",   rgb(0, 162, 255) },
+                { "Red",    rgb(255, 60, 60) },
+                { "Green",  rgb(60, 220, 130) },
+                { "Purple", rgb(160, 110, 255) },
+                { "Orange", rgb(255, 150, 40) },
+                { "White",  rgb(240, 240, 240) },
+            }
+
+            for _, Preset in Presets do
+                section:button({name = Preset[1], callback = function()
+                    library:update_theme("accent", Preset[2])
+                end})
+            end
+
             section:keybind({name = "Menu Bind", key = Enum.KeyCode.Insert, callback = function(bool) window.toggle_menu(bool) end, seperator = true, default = true})
 
             local _request = (http_request and http_request) or (request and request) or (http and http.request)
@@ -3766,7 +3894,7 @@ end
         
                 if Server.id == game.JobId then
                     library.notifications:create_notification({
-                        name = "bronx.lol",
+                        name = "Talon",
                         info = `You are currently in the smallest server!`,
                         lifetime = 10
                     })
