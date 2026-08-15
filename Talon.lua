@@ -33,6 +33,10 @@ local Services = setmetatable({}, {
     end
 })
 
+-- جسم المكتبة يستعمل RunService كمتغير عام (كان معرّفا في السكربت الاصلي).
+-- بدونه:  attempt to index nil with 'RenderStepped'  داخل library:window
+RunService = Services.RunService
+
 local Mobile = Services.UserInputService.TouchEnabled
 
 getgenv().library = {
