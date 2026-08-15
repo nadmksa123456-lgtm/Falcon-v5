@@ -1,21 +1,22 @@
 --[[
     Talon  |  UI Library  (standalone)
 
-    المتطلبات من المنفذ:
+    Executor requirements:
         getcustomasset · writefile · readfile · isfile · delfile
-        makefolder · listfiles · gethui (اختياري) · cloneref (اختياري)
+        makefolder · listfiles · gethui (optional) · cloneref (optional)
 
-    الاستعمال:
+    Usage:
         local library = loadstring(readfile("library.lua"))()
         local window  = library:window({name = "Talon", logo = "Talon.png"})
 --]]
 
 -- ============================================================================
---  ماكروات Luraph
---  المكتبة الاصلية كانت جزءا من سكربت مشفّر يعرّف هذي الماكروات في اعلاه.
---  بدونها ينهار اول استدعاء:  LPH_NO_VIRTUALIZE(...) = attempt to call a nil value
---  (كان يقع في library:draggify فتظهر النافذة فارغة وجامدة).
---  هنا نعرّفها كدوال هوية لان النسخة غير مشفّرة.
+--  Luraph macros
+--  The original library was part of an obfuscated script that defined these
+--  above it. Without them the first call fails:
+--      LPH_NO_VIRTUALIZE(...) = attempt to call a nil value
+--  (it hit library:draggify, leaving the window blank and frozen).
+--  Defined here as identity functions since this build is not obfuscated.
 -- ============================================================================
 LPH_NO_VIRTUALIZE = LPH_NO_VIRTUALIZE or function(f) return f end
 LPH_JIT           = LPH_JIT           or function(f) return f end
@@ -32,8 +33,9 @@ local Services = setmetatable({}, {
     end
 })
 
--- جسم المكتبة يستعمل RunService كمتغير عام (كان معرّفا في السكربت الاصلي).
--- بدونه:  attempt to index nil with 'RenderStepped'  داخل library:window
+-- The library body uses RunService as a global (it was defined in the
+-- original script). Without it: attempt to index nil with 'RenderStepped'
+-- inside library:window
 RunService = Services.RunService
 
 local Mobile = Services.UserInputService.TouchEnabled
@@ -52,7 +54,7 @@ getgenv().library = {
 
 local library = getgenv().library
 
--- ---------------------------------------------------------------- الايقونات
+-- ------------------------------------------------------------------- Icons
 local Images = {"Talon.png", "ESP.png", "World.png", "Wrench.png", "Settings.png", "Node.png", "cursor.png", "Bullet.png", "Snapline.png", "Pistol.png", "folder.png", "UZI.png", "FieldOfView2.png", "Lock.png", "Aimlock.png", "Cash.png", "Wheatt.png", "Pickkaxe.png", "unlocked.png"}
 
 local IMAGE_BASE = "https://raw.githubusercontent.com/nadmksa123456-lgtm/Falcon-v5/main/assets/"
@@ -62,12 +64,14 @@ for _, path in next, library.folders do
 end
 
 -- ============================================================================
---  تنزيل الايقونات مع تحقق من صحة الملف
+--  Icon download with file validation
 --
---  الاصل كان يكتب اي رد نصي غير فارغ. وعندما يفشل الرابط ترجع github
---  النص "404: Not Found" فيُحفظ كملف PNG تالف، ثم يجده isfile في كل تشغيل
---  لاحق فلا يعيد التنزيل ابدا — وتبقى الايقونة مفقودة الى الابد.
---  هنا نتحقق من توقيع PNG، ونحذف اي ملف تالف من تنزيل سابق فاشل.
+--  The original wrote any non-empty text response. When a URL failed, GitHub
+--  returned "404: Not Found", which got saved as a corrupt PNG. isfile then
+--  found it on every later run, so it never re-downloaded and the icon was
+--  missing forever.
+--  Here we check the PNG signature and delete anything left by a failed
+--  earlier download.
 -- ============================================================================
 local function Valid_PNG(Data)
     return type(Data) == "string"
@@ -104,11 +108,12 @@ end
 -- ============================================================================
 --  GetImage
 --
---  تنزيل عند الطلب: يكفي رفع الصورة الى مجلد assets في المستودع، بلا
---  حاجة لاضافتها الى قائمة Images اعلاه. اول استدعاء ينزلها ويحفظها،
---  وما بعده يقرأها محليا.
+--  On-demand download: just upload the image to the repo's assets folder --
+--  no need to add it to the Images list above. The first call fetches and
+--  caches it; every call after reads it locally.
 --
---  الاسماء الفاشلة تُخزّن حتى لا يتكرر طلبها في كل بناء عنصر.
+--  Failed names are cached so a missing image is not re-requested on every
+--  element build.
 -- ============================================================================
 local Image_Cache = {}
 
@@ -148,7 +153,7 @@ if not LRM_SecondsLeft then
 end
 
 -- ============================================================================
---  جسم المكتبة
+--  Library body
 -- ============================================================================
 --LPH_JIT_MAX(function()
     local uis = Services.UserInputService
@@ -317,8 +322,8 @@ end
             return getcustomasset(Name .. ".font");
         end
         
-        -- خطوط القائمة نفسها. فشل التنزيل هنا كان يمنع ظهور القائمة
-        -- كليا، لذلك نرجع الى خط مدمج بدل التوقف.
+        -- The menu's own fonts. A download failure here used to stop the
+        -- menu appearing at all, so we fall back to a built-in font.
         local function Try(Name, Id, Url)
             local Ok, Result = pcall(function()
                 return Register_Font(Name, 200, "Normal", {
@@ -760,15 +765,15 @@ end
                 local accent = themes.preset.accent
 
                 -- ============================================================
-                --  الشعار
-                --  يقرأ  assets/Talon.png  ويلوّنه بلون القائمة المميز، فيتغير
-                --  معه تلقائيا عند تبديل اللون من الاعدادات.
-                --  اذا لم يوجد الملف يعود الى العنوان النصي حتى لا تظهر
-                --  القائمة بمساحة فارغة.
+                --  Logo
+                --  Reads assets/Talon.png and tints it with the menu accent,
+                --  so it follows the colour picked in Settings.
+                --  Falls back to the text title if the file is missing, so
+                --  the menu never shows an empty block.
                 -- ============================================================
                 local Logo = GetImage(cfg.logo)
 
-                -- بلوك الشعار: ارتفاع ثابت 120 اعلى الشريط الجانبي
+                -- Logo block: fixed height at the top of the sidebar
                 items[ "logo_holder" ] = library:create( "Frame" , {
                     Parent = items[ "side_frame" ];
                     Name = "\0";
@@ -892,10 +897,10 @@ end
                 });
                 
                 -- ============================================================
-                --  الشريط السفلي
-                --  حُذفت النصوص الاصلية من الشريط السفلي.
-                --  بناء على الطلب. الشريط نفسه باق لانه يكمل الزاوية السفلية
-                --  المدورة للنافذة.
+                --  Bottom bar
+                --  The original bottom-bar texts were removed on request.
+                --  The bar itself stays because it completes the window's
+                --  rounded bottom corners.
                 -- ============================================================
             end 
 
@@ -904,8 +909,8 @@ end
                 library:resizify(items[ "main" ])
             end
 
-            -- زر MENU العائم أُزيل بناء على الطلب.
-            -- الاظهار/الاخفاء عبر مفتاح Insert (قابل للتغيير من Settings).
+            -- The floating MENU button was removed on request.
+            -- Show/hide is bound to Insert (rebindable in Settings).
 
             function cfg.toggle_menu(bool) 
                 -- WIP 
@@ -1296,8 +1301,8 @@ end
                 local cfg = {items = {}, size = properties.size or 1}
 
                 local items = cfg.items; do     
-                    -- العمود قابل للتمرير: البطاقات صارت تتمدد بحسب محتواها
-                    -- فقد يتجاوز مجموعها ارتفاع النافذة.
+                    -- Scrollable column: cards now grow with their content,
+                    -- so their total height can exceed the window.
                     items[ "column" ] = library:create( "ScrollingFrame" , {
                         Parent = self[ "parent" ] or self.items["tab_parent"];
                         BackgroundTransparency = 1;
@@ -1372,10 +1377,11 @@ end
             
             local items = cfg.items; do 
                 -- ============================================================
-                --  ارتفاع البطاقة
-                --  كان  dim2(0, 0, cfg.size, -3)  اي نسبة ثابتة من ارتفاع
-                --  العمود، فتبقى مساحة فارغة تحت المحتوى عند قلة العناصر.
-                --  الان AutomaticSize.Y: تطول وتقصر مع محتواها.
+                --  Card height
+                --  Was dim2(0, 0, cfg.size, -3) -- a fixed fraction of the
+                --  column, leaving empty space under the content when a card
+                --  held few elements.
+                --  Now AutomaticSize.Y: it grows and shrinks with content.
                 -- ============================================================
                 items[ "outline" ] = library:create( "Frame" , {
                     Name = "\0";
@@ -1408,8 +1414,8 @@ end
                     CornerRadius = dim(0, 7)
                 });
                 
-                -- كان ScrollingFrame بارتفاع ثابت. صار اطارا يتمدد،
-                -- والتمرير انتقل الى العمود نفسه.
+                -- Was a fixed-height ScrollingFrame. Now a Frame that grows;
+                -- scrolling moved up to the column itself.
                 items[ "scrolling" ] = library:create( "Frame" , {
                     Parent = items[ "inline" ];
                     Name = "\0";
@@ -3852,7 +3858,7 @@ end
 
             section:colorpicker({name = "Menu Accent", callback = function(color, alpha) library:update_theme("accent", color) end, color = themes.preset.accent})
 
-            -- الوان جاهزة تغيّر القائمة كاملة: الشعار والايقونات والتوغلات
+            -- Presets recolour the whole menu: logo, icons and toggles
             local Presets = {
                 { "Blue",   rgb(0, 162, 255) },
                 { "Red",    rgb(255, 60, 60) },
@@ -4172,12 +4178,13 @@ end
         end
     --end)()
 
+
 -- ============================================================================
---  القائمة
+--  MENU
 --
---  فارغة عمدا: الشعار + قسم Configs فقط.
---  اضف تبويباتك ومميزاتك تحت السطر المشار اليه.
---  الترتيب:  window > seperator > tab > column > section > element
+--  Intentionally empty: logo + Configs tab only.
+--  Add your tabs and features below the marked line.
+--  Order:  window > seperator > tab > column > section > element
 -- ============================================================================
 local window = library:window({
     name = "Talon",
@@ -4188,10 +4195,17 @@ local window = library:window({
 
 
 -- ============================================================================
---  ابدأ اضافة مميزاتك من هنا
+--  ADD YOUR FEATURES BELOW
 -- ============================================================================
 --
---  مثال:
+--  IMPORTANT: every callback fires once at creation time, before the game is
+--  ready, and nothing wraps it in pcall. Keep callbacks to a plain assignment
+--  and apply the value from a separate loop -- an error here kills the script
+--  and the menu never finishes building.
+--
+--  Example:
+--
+--  local Config = { Speed = 16 }
 --
 --  window:seperator({ name = "Game" })
 --
@@ -4202,30 +4216,30 @@ local window = library:window({
 --  })
 --
 --  local Column  = Main:column({})
---  local Section = Column:section({ name = "Modifications", side = "left", icon = GetImage("Settings.png") })
+--  local Section = Column:section({ name = "Modifications", side = "left", icon = GetImage("Wrench.png") })
 --
 --  Section:toggle({ name = "Fly", flag = "Fly", type = "toggle", callback = function(State)
---      -- ميزتك هنا
+--      Config.Fly = State
 --  end})
 --
 --  Section:slider({ name = "Speed", flag = "Speed", min = 0, max = 100, default = 16, suffix = " st/s" })
 --  Section:keybind({ name = "Bind", flag = "Bind", key = Enum.KeyCode.LeftAlt, mode = "Hold" })
 --  Section:dropdown({ name = "Mode", flag = "Mode", items = { "A", "B" }, default = "A" })
 --  Section:button({ name = "Do It", callback = function() end })
---  Section:textbox({ name = "Name", flag = "Name" })
---  Section:label({ name = "معلومة", wrapped = true })
+--  Section:textbox({ name = "Target", flag = "Target" })
+--  Section:label({ name = "Some information", wrapped = true })
 --  Section:list({ flag = "List", options = { "1", "2" } })
 --  Section:toggle({ name = "ESP", type = "toggle" }):colorpicker({ flag = "ESPColor", color = Color3.new(1,1,1) })
 --
---  القيم تُقرأ من  library.flags["Fly"]  وتُحفظ تلقائيا في Configs.
+--  Values are read from  library.flags["Fly"]  and saved automatically.
 --
 -- ============================================================================
 
 
 -- ---------------------------------------------------------------- Settings
--- يبني تبويب Configs: حفظ/تحميل/حذف الاعدادات، لون القائمة،
--- الالوان الجاهزة، مفتاح الاظهار، وتبديل السيرفرات.
--- ناده دائما بعد اضافة تبويباتك.
+-- Builds the Configs tab: save/load/delete configs, menu accent, colour
+-- presets, toggle keybind and server switching.
+-- Always call this after adding your own tabs.
 library:init_config(window)
 
 library.notifications:create_notification({
