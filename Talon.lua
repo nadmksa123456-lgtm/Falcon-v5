@@ -1301,19 +1301,8 @@ end
                 local cfg = {items = {}, size = properties.size or 1}
 
                 local items = cfg.items; do     
-                    -- ====================================================
-                    --  Scrollable column
-                    --
-                    --  Cards grow with their content, so a column can run
-                    --  past the bottom of the window and must scroll.
-                    --
-                    --  AutomaticCanvasSize stalls here: it measures the
-                    --  canvas before the AutomaticSize cards finish growing
-                    --  and never re-measures, so CanvasSize stays at 0 and
-                    --  the mouse wheel does nothing.
-                    --  Driving CanvasSize from the layout's own measurement
-                    --  is deterministic and updates on every content change.
-                    -- ====================================================
+                    -- Scrollable column: cards now grow with their content,
+                    -- so their total height can exceed the window.
                     items[ "column" ] = library:create( "ScrollingFrame" , {
                         Parent = self[ "parent" ] or self.items["tab_parent"];
                         BackgroundTransparency = 1;
@@ -1322,34 +1311,25 @@ end
                         Size = dim2(0, 0, cfg.size, 0);
                         BorderSizePixel = 0;
                         Active = true;
-                        ScrollingEnabled = true;
-                        ScrollingDirection = Enum.ScrollingDirection.Y;
-                        ElasticBehavior = Enum.ElasticBehavior.Never;
+                        AutomaticCanvasSize = Enum.AutomaticSize.Y;
                         CanvasSize = dim2(0, 0, 0, 0);
-                        ScrollBarThickness = 4;
+                        ScrollBarThickness = 2;
                         ScrollBarImageColor3 = rgb(44, 44, 46);
                         BackgroundColor3 = rgb(255, 255, 255)
                     });
-
+                    
                     library:create( "UIPadding" , {
                         PaddingBottom = dim(0, 10);
                         Parent = items[ "column" ]
                     });
-
-                    local layout = library:create( "UIListLayout" , {
+                    
+                    library:create( "UIListLayout" , {
                         Parent = items[ "column" ];
                         HorizontalFlex = Enum.UIFlexAlignment.Fill;
                         Padding = dim(0, 10);
                         FillDirection = Enum.FillDirection.Vertical;
                         SortOrder = Enum.SortOrder.LayoutOrder
                     });
-
-                    local function measure()
-                        items[ "column" ].CanvasSize = dim2(0, 0, 0, layout.AbsoluteContentSize.Y + 12)
-                    end
-
-                    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(measure)
-                    measure()
                 end 
 
                 return setmetatable(cfg, library)
@@ -3878,6 +3858,22 @@ end
 
             section:colorpicker({name = "Menu Accent", callback = function(color, alpha) library:update_theme("accent", color) end, color = themes.preset.accent})
 
+            -- Presets recolour the whole menu: logo, icons and toggles
+            local Presets = {
+                { "Blue",   rgb(0, 162, 255) },
+                { "Red",    rgb(255, 60, 60) },
+                { "Green",  rgb(60, 220, 130) },
+                { "Purple", rgb(160, 110, 255) },
+                { "Orange", rgb(255, 150, 40) },
+                { "White",  rgb(240, 240, 240) },
+            }
+
+            for _, Preset in Presets do
+                section:button({name = Preset[1], callback = function()
+                    library:update_theme("accent", Preset[2])
+                end})
+            end
+
             section:keybind({name = "Menu Bind", key = Enum.KeyCode.Insert, callback = function(bool) window.toggle_menu(bool) end, seperator = true, default = true})
 
             local _request = (http_request and http_request) or (request and request) or (http and http.request)
@@ -4182,4 +4178,72 @@ end
         end
     --end)()
 
-return library
+
+-- ============================================================================
+--  MENU
+--
+--  Intentionally empty: logo + Configs tab only.
+--  Add your tabs and features below the marked line.
+--  Order:  window > seperator > tab > column > section > element
+-- ============================================================================
+local window = library:window({
+    name = "Talon",
+    suffix = "",
+    logo = "Talon.png",
+    size = UDim2.new(0, 700, 0, 565),
+})
+
+
+-- ============================================================================
+--  ADD YOUR FEATURES BELOW
+-- ============================================================================
+--
+--  IMPORTANT: every callback fires once at creation time, before the game is
+--  ready, and nothing wraps it in pcall. Keep callbacks to a plain assignment
+--  and apply the value from a separate loop -- an error here kills the script
+--  and the menu never finishes building.
+--
+--  Example:
+--
+--  local Config = { Speed = 16 }
+--
+--  window:seperator({ name = "Game" })
+--
+--  local Main = window:tab({
+--      name = "Main",
+--      tabs = { "Local Player" },
+--      icon = GetImage("World.png"),
+--  })
+--
+--  local Column  = Main:column({})
+--  local Section = Column:section({ name = "Modifications", side = "left", icon = GetImage("Wrench.png") })
+--
+--  Section:toggle({ name = "Fly", flag = "Fly", type = "toggle", callback = function(State)
+--      Config.Fly = State
+--  end})
+--
+--  Section:slider({ name = "Speed", flag = "Speed", min = 0, max = 100, default = 16, suffix = " st/s" })
+--  Section:keybind({ name = "Bind", flag = "Bind", key = Enum.KeyCode.LeftAlt, mode = "Hold" })
+--  Section:dropdown({ name = "Mode", flag = "Mode", items = { "A", "B" }, default = "A" })
+--  Section:button({ name = "Do It", callback = function() end })
+--  Section:textbox({ name = "Target", flag = "Target" })
+--  Section:label({ name = "Some information", wrapped = true })
+--  Section:list({ flag = "List", options = { "1", "2" } })
+--  Section:toggle({ name = "ESP", type = "toggle" }):colorpicker({ flag = "ESPColor", color = Color3.new(1,1,1) })
+--
+--  Values are read from  library.flags["Fly"]  and saved automatically.
+--
+-- ============================================================================
+
+
+-- ---------------------------------------------------------------- Settings
+-- Builds the Configs tab: save/load/delete configs, menu accent, colour
+-- presets, toggle keybind and server switching.
+-- Always call this after adding your own tabs.
+library:init_config(window)
+
+library.notifications:create_notification({
+    name = "Talon",
+    info = "loaded - press Insert to toggle",
+    lifetime = 5,
+})
