@@ -4053,6 +4053,13 @@ end
 -- ============================================================================
 --  القائمة
 -- ============================================================================
+local function STEP(Name)
+    warn("[Talon] step: " .. Name)
+end
+
+STEP("1 library loaded")
+STEP("2 window")
+
 local window = library:window({
     name = "Talon",
     suffix = "",
@@ -4062,6 +4069,8 @@ local window = library:window({
 
 -- ---------------------------------------------------------------- Game
 window:seperator({ name = "Game" })
+
+STEP("3 main tab")
 
 local LocalPlayerTab, PlayersTab, TeleportsTab = window:tab({
     name = "Main",
@@ -4143,6 +4152,8 @@ end
 -- ---------------------------------------------------------------- Combat
 window:seperator({ name = "Combat" })
 
+STEP("4 silent tab")
+
 local SilentTab = window:tab({ name = "Silent Aim", tabs = { "General Settings" }, icon = GetImage("Pistol.png") })
 
 do
@@ -4176,6 +4187,8 @@ do
     Snap:slider({ name = "Snapline Thickness", flag = "SnapThick", min = 1, max = 5, default = 1 })
 end
 
+STEP("5 aimlock tab")
+
 local AimlockTab = window:tab({ name = "Aimlock", tabs = { "General Settings" }, icon = GetImage("Aimlock.png") })
 
 do
@@ -4194,6 +4207,8 @@ end
 
 -- ---------------------------------------------------------------- World
 window:seperator({ name = "World" })
+
+STEP("6 visuals tab")
 
 local VisualsTab = window:tab({ name = "Visuals", tabs = { "Players" }, icon = GetImage("ESP.png") })
 
@@ -4219,6 +4234,8 @@ do
 end
 
 -- ---------------------------------------------------------------- Settings
+STEP("7 config")
+
 library:init_config(window)
 
 library.notifications:create_notification({
