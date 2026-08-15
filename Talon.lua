@@ -871,63 +871,8 @@ end
                 library:resizify(items[ "main" ])
             end
 
-            -- ================================================================
-            --  زر الاظهار/الاخفاء
-            --  في ScreenGui منفصل عمدا: toggle_menu يعطل library["items"]
-            --  كاملة، فلو كان الزر داخلها لاختفى معها ولم يعد بالامكان
-            --  ارجاع القائمة الا بمفتاح Insert.
-            -- ================================================================
-            library[ "toggle_gui" ] = library:create( "ScreenGui" , {
-                Parent = gethui and gethui() or Services.CoreGui;
-                Name = "\0";
-                Enabled = true;
-                ZIndexBehavior = Enum.ZIndexBehavior.Global;
-                IgnoreGuiInset = true;
-            });
-
-            items[ "toggle_button" ] = library:create( "TextButton" , {
-                Parent = library[ "toggle_gui" ];
-                Name = "\0";
-                AnchorPoint = vec2(0, 1);
-                Position = dim2(0, 20, 1, -20);
-                Size = dim2(0, 116, 0, 40);
-                BackgroundColor3 = rgb(25, 25, 29);
-                AutoButtonColor = false;
-                BorderSizePixel = 0;
-                Text = "";
-            });
-
-            library:create( "UICorner" , {
-                Parent = items[ "toggle_button" ];
-                CornerRadius = dim(0, 8)
-            });
-
-            library:create( "UIStroke" , {
-                Color = themes.preset.accent;
-                Parent = items[ "toggle_button" ];
-                Thickness = 1;
-                ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-            });
-
-            items[ "toggle_label" ] = library:create( "TextLabel" , {
-                Parent = items[ "toggle_button" ];
-                Name = "\0";
-                FontFace = fonts.font;
-                Text = "MENU";
-                TextColor3 = themes.preset.accent;
-                BackgroundTransparency = 1;
-                Size = dim2(1, 0, 1, 0);
-                BorderSizePixel = 0;
-                TextSize = 15;
-            }); library:apply_theme(items[ "toggle_label" ], "accent", "TextColor3");
-
-            items[ "toggle_button" ].MouseButton1Click:Connect(function()
-                cfg.toggle_menu(not library[ "items" ].Enabled)
-            end)
-
-            function cfg.set_toggle_button(State)
-                library[ "toggle_gui" ].Enabled = State and true or false
-            end 
+            -- زر MENU العائم أُزيل بناء على الطلب.
+            -- الاظهار/الاخفاء عبر مفتاح Insert (قابل للتغيير من Settings).
 
             function cfg.toggle_menu(bool) 
                 -- WIP 
@@ -3889,12 +3834,6 @@ end
                     library:update_theme("accent", Preset[2])
                 end})
             end
-
-            section:toggle({name = "Show MENU Button", flag = "show_menu_button", type = "toggle", default = true, seperator = true, callback = function(State)
-                if window.set_toggle_button then
-                    window.set_toggle_button(State)
-                end
-            end})
 
             section:keybind({name = "Menu Bind", key = Enum.KeyCode.Insert, callback = function(bool) window.toggle_menu(bool) end, seperator = true, default = true})
 
