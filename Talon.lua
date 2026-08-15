@@ -38,7 +38,7 @@ local library = getgenv().library
 -- ---------------------------------------------------------------- الايقونات
 local Images = {"ESP.png", "World.png", "Wrench.png", "Settings.png", "Node.png", "cursor.png", "Bullet.png", "Snapline.png", "Pistol.png", "folder.png", "UZI.png", "FieldOfView2.png", "Lock.png", "Aimlock.png", "Cash.png", "Wheatt.png", "Pickkaxe.png", "unlocked.png"}
 
-local IMAGE_BASE = "https://raw.githubusercontent.com/KingVonOBlockJoyce/imagessynex/main/"
+local IMAGE_BASE = "https://raw.githubusercontent.com/nadmksa123456-lgtm/Falcon-v5/main/assets/"
 
 for _, path in next, library.folders do
     pcall(makefolder, library.directory .. path)
@@ -4055,7 +4055,7 @@ end
 --  غيّر الرابط الى شعارك في مستودعك. يُنزّل مرة واحدة ويُحفظ محليا.
 --  اجعله ابيض على خلفية شفافة: المكتبة تصبغه بلون القائمة المميز.
 -- ============================================================================
-local LOGO_URL  = "https://raw.githubusercontent.com/USER/REPO/main/Talon.png"
+local LOGO_URL  = "https://raw.githubusercontent.com/nadmksa123456-lgtm/Falcon-v5/main/Talon.png"
 local LOGO_NAME = "Talon.png"
 
 do
