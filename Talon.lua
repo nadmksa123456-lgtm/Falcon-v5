@@ -101,12 +101,46 @@ for Index, Value in Images do
     end
 end
 
-function GetImage(Name)
-    local Location = library.directory .. "/assets/" .. Name
+-- ============================================================================
+--  GetImage
+--
+--  تنزيل عند الطلب: يكفي رفع الصورة الى مجلد assets في المستودع، بلا
+--  حاجة لاضافتها الى قائمة Images اعلاه. اول استدعاء ينزلها ويحفظها،
+--  وما بعده يقرأها محليا.
+--
+--  الاسماء الفاشلة تُخزّن حتى لا يتكرر طلبها في كل بناء عنصر.
+-- ============================================================================
+local Image_Cache = {}
 
-    if isfile(Location) then
-        return getcustomasset(Location)
+function GetImage(Name)
+    if Image_Cache[Name] ~= nil then
+        return Image_Cache[Name] or nil
     end
+
+    local Location = library.directory .. "/assets/" .. Name
+    local Ready = isfile(Location) and Valid_PNG(readfile(Location))
+
+    if not Ready then
+        pcall(function()
+            local Data = game:HttpGet(IMAGE_BASE .. Name)
+
+            if Valid_PNG(Data) then
+                writefile(Location, Data)
+                Ready = true
+            end
+        end)
+    end
+
+    if not Ready then
+        warn("[Talon] image not found: " .. Name)
+        Image_Cache[Name] = false
+        return nil
+    end
+
+    local Asset = getcustomasset(Location)
+    Image_Cache[Name] = Asset
+
+    return Asset
 end
 
 if not LRM_SecondsLeft then
