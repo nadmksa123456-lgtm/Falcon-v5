@@ -1,14 +1,13 @@
 --[[
-    bronx.lol  |  UI Library  (standalone)
-    مستخرجة من  South_Bronx_ONLY.lua   الاسطر 4790-8776
+    Talon  |  UI Library  (standalone)
 
     المتطلبات من المنفذ:
         getcustomasset · writefile · readfile · isfile · delfile
         makefolder · listfiles · gethui (اختياري) · cloneref (اختياري)
 
     الاستعمال:
-        local library = loadstring(readfile("bronx_ui/library.lua"))()
-        local window  = library:window({name = "bronx", suffix = ".lol"})
+        local library = loadstring(readfile("library.lua"))()
+        local window  = library:window({name = "Talon", logo = "Talon.png"})
 --]]
 
 -- ============================================================================
@@ -40,7 +39,7 @@ RunService = Services.RunService
 local Mobile = Services.UserInputService.TouchEnabled
 
 getgenv().library = {
-    directory = "bronx.lol_remastered",
+    directory = "Talon",
     folders = { "/fonts", "/configs", "/assets" },
     priority = {},
     whitelist = {},
@@ -96,7 +95,7 @@ for Index, Value in Images do
             if Valid_PNG(Data) then
                 writefile(Location, Data)
             else
-                warn("[bronx.lol] bad image: " .. Value)
+                warn("[Talon] bad image: " .. Value)
             end
         end)
     end
@@ -295,7 +294,7 @@ end
             end)
 
             if not Ok or not Result then
-                warn("[bronx.lol] menu font failed: " .. Name)
+                warn("[Talon] menu font failed: " .. Name)
                 return nil
             end
 
@@ -860,7 +859,7 @@ end
                 
                 -- ============================================================
                 --  الشريط السفلي
-                --  حُذف نصّا  "bronx.lol : <game>"  و  "lifetime, bronx.lol"
+                --  حُذفت النصوص الاصلية من الشريط السفلي.
                 --  بناء على الطلب. الشريط نفسه باق لانه يكمل الزاوية السفلية
                 --  المدورة للنافذة.
                 -- ============================================================
@@ -3855,7 +3854,7 @@ end
         
                 if Server.id == game.JobId then
                     library.notifications:create_notification({
-                        name = "bronx.lol",
+                        name = "Talon",
                         info = `You are currently in the smallest server!`,
                         lifetime = 10
                     })
@@ -4141,13 +4140,11 @@ end
 
 -- ============================================================================
 --  القائمة
+--
+--  فارغة عمدا: الشعار + قسم Configs فقط.
+--  اضف تبويباتك ومميزاتك تحت السطر المشار اليه.
+--  الترتيب:  window > seperator > tab > column > section > element
 -- ============================================================================
-local function STEP(Name)
-    warn("[Talon] step: " .. Name)
-end
-
-STEP("1 library loaded")
-
 local window = library:window({
     name = "Talon",
     suffix = "",
@@ -4155,181 +4152,50 @@ local window = library:window({
     size = UDim2.new(0, 700, 0, 565),
 })
 
-STEP("2 window")
 
--- ---------------------------------------------------------------- Game
-window:seperator({ name = "Game" })
+-- ============================================================================
+--  ابدأ اضافة مميزاتك من هنا
+-- ============================================================================
+--
+--  مثال:
+--
+--  window:seperator({ name = "Game" })
+--
+--  local Main = window:tab({
+--      name = "Main",
+--      tabs = { "Local Player" },
+--      icon = GetImage("World.png"),
+--  })
+--
+--  local Column  = Main:column({})
+--  local Section = Column:section({ name = "Modifications", side = "left", icon = GetImage("Settings.png") })
+--
+--  Section:toggle({ name = "Fly", flag = "Fly", type = "toggle", callback = function(State)
+--      -- ميزتك هنا
+--  end})
+--
+--  Section:slider({ name = "Speed", flag = "Speed", min = 0, max = 100, default = 16, suffix = " st/s" })
+--  Section:keybind({ name = "Bind", flag = "Bind", key = Enum.KeyCode.LeftAlt, mode = "Hold" })
+--  Section:dropdown({ name = "Mode", flag = "Mode", items = { "A", "B" }, default = "A" })
+--  Section:button({ name = "Do It", callback = function() end })
+--  Section:textbox({ name = "Name", flag = "Name" })
+--  Section:label({ name = "معلومة", wrapped = true })
+--  Section:list({ flag = "List", options = { "1", "2" } })
+--  Section:toggle({ name = "ESP", type = "toggle" }):colorpicker({ flag = "ESPColor", color = Color3.new(1,1,1) })
+--
+--  القيم تُقرأ من  library.flags["Fly"]  وتُحفظ تلقائيا في Configs.
+--
+-- ============================================================================
 
-local LocalPlayerTab, PlayersTab, TeleportsTab = window:tab({
-    name = "Main",
-    tabs = { "Local Player", "Players", "Teleports" },
-    icon = GetImage("World.png"),
-})
-
-STEP("3 main tab")
-
-do
-    local Column = LocalPlayerTab:column({})
-    local Mods = Column:section({ name = "Local Player Modifications", side = "left", size = 0.5 })
-
-    for _, Name in { "Infinite Stamina", "Instant Interact", "Delete On Key", "Hide Name", "No Clip", "Speed" } do
-        Mods:toggle({ name = Name, flag = Name, type = "toggle", default = false, callback = function(State)
-            print(Name, State)
-        end})
-    end
-
-    local Settings = Column:section({ name = "Modification Settings", side = "left", size = 0.5, icon = GetImage("Settings.png") })
-
-    Settings:slider({ name = "WalkSpeed Value", flag = "WalkSpeed", min = 0, max = 100, default = 16, suffix = " st/s" })
-    Settings:keybind({ name = "Delete + Click Key", flag = "DeleteKey", key = Enum.KeyCode.LeftAlt, mode = "Hold" })
-    Settings:dropdown({ name = "Select Method", flag = "Method", width = 100, items = { "Dirt Bike", "Damage", "Tween" }, default = "Damage" })
-
-    local Right = LocalPlayerTab:column({})
-    local Vuln = Right:section({ name = "Vulnerability Section", side = "right", size = 0.3, icon = GetImage("unlocked.png") })
-
-    Vuln:toggle({ name = "Free Tier 1, 2 and 3", type = "toggle" })
-    Vuln:toggle({ name = "Free Extra Hot Chips Cash", type = "toggle" })
-
-    local Farm = Right:section({ name = "Auto Farming Section", side = "right", size = 0.7, icon = GetImage("Wheatt.png") })
-
-    for _, Name in { "Auto-Farm Cards", "Auto-Farm Boxes", "Auto-Farm Chips", "Auto-Farm Marshmallows" } do
-        Farm:toggle({ name = Name, type = "toggle" })
-    end
-
-    Farm:slider({ name = "Marshmallow Amount", flag = "Marsh", min = 1, max = 50, default = 5 })
-    Farm:label({ name = "You must own a house with pots to use the marshmallow farm!", wrapped = true })
-    Farm:button({ name = "Duplication Vulnerability", callback = function() print("dupe") end })
-end
-
-do
-    local Column = PlayersTab:column({})
-    local List = Column:section({ name = "Select Player", side = "left", size = 1 })
-
-    local Selector = List:list({ flag = "SelectedPlayer", options = {} })
-
-    local function Refresh()
-        local Cache = {}
-
-        for _, Player in game:GetService("Players"):GetPlayers() do
-            if Player ~= game:GetService("Players").LocalPlayer then
-                table.insert(Cache, Player.Name)
-            end
-        end
-
-        table.sort(Cache)
-        Selector.refresh_options(Cache)
-    end
-
-    task.spawn(Refresh)
-    game:GetService("Players").PlayerAdded:Connect(Refresh)
-    game:GetService("Players").PlayerRemoving:Connect(Refresh)
-
-    local Right = PlayersTab:column({})
-    local Options = Right:section({ name = "Player Options", side = "right", size = 1, icon = GetImage("Wrench.png") })
-
-    Options:toggle({ name = "Spectate Player", type = "toggle" })
-    Options:toggle({ name = "Bring Player", type = "toggle" })
-    Options:button({ name = "Teleport To Player", callback = function() print("tp") end })
-end
-
-do
-    local Column = TeleportsTab:column({})
-    local Places = Column:section({ name = "Teleport To Location", side = "left", size = 1, icon = GetImage("World.png") })
-
-    Places:list({ flag = "Location", options = { "Bank", "Gun Store", "Black Market", "Studio", "Dealership" } })
-end
-
--- ---------------------------------------------------------------- Combat
-window:seperator({ name = "Combat" })
-
-local SilentTab = window:tab({ name = "Silent Aim", tabs = { "General Settings" }, icon = GetImage("Pistol.png") })
-
-STEP("4 silent tab")
-
-do
-    local Column = SilentTab:column({})
-    local General = Column:section({ name = "General", side = "left", size = 0.35, icon = GetImage("UZI.png") })
-
-    General:toggle({ name = "Enabled", flag = "Silent", type = "toggle" })
-    General:keybind({ name = "Keybind", flag = "SilentBind", mode = "Always" })
-
-    local Settings = Column:section({ name = "Settings", side = "left", size = 0.65, icon = GetImage("Settings.png") })
-
-    Settings:toggle({ name = "Visible Check", type = "toggle" })
-    Settings:dropdown({ name = "Target Parts", flag = "Parts", width = 110, multi = true, items = { "Head", "UpperTorso", "LowerTorso", "HumanoidRootPart" }, default = { "Head" } })
-    Settings:slider({ name = "Max Distance", flag = "SilentDist", min = 0, max = 1000, default = 300, suffix = "st" })
-    Settings:slider({ name = "Hit Chance", flag = "HitChance", min = 0, max = 100, default = 100, suffix = "%" })
-
-    local Right = SilentTab:column({})
-    local FOV = Right:section({ name = "Field Of View", side = "right", size = 0.4, icon = GetImage("FieldOfView2.png") })
-
-    FOV:toggle({ name = "Enabled", type = "toggle" })
-    FOV:toggle({ name = "Draw Circle", type = "toggle" }):colorpicker({ flag = "FOVColor", color = Color3.new(1, 1, 1), alpha = 0.25 })
-
-    local FOVSet = Right:section({ name = "Field Of View Settings", side = "right", size = 0.3, icon = GetImage("Settings.png") })
-
-    FOVSet:slider({ name = "Radius", flag = "Radius", min = 0, max = 1000, default = 100 })
-    FOVSet:slider({ name = "Sides", flag = "Sides", min = 3, max = 100, default = 25 })
-
-    local Snap = Right:section({ name = "Snapline", side = "right", size = 0.3, icon = GetImage("Snapline.png") })
-
-    Snap:toggle({ name = "Enabled", type = "toggle" }):colorpicker({ flag = "SnapColor", color = Color3.new(1, 1, 1), alpha = 1 })
-    Snap:slider({ name = "Snapline Thickness", flag = "SnapThick", min = 1, max = 5, default = 1 })
-end
-
-local AimlockTab = window:tab({ name = "Aimlock", tabs = { "General Settings" }, icon = GetImage("Aimlock.png") })
-
-STEP("5 aimlock tab")
-
-do
-    local Column = AimlockTab:column({})
-    local General = Column:section({ name = "General", side = "left", size = 0.4, icon = GetImage("UZI.png") })
-
-    General:toggle({ name = "Enabled", flag = "Aimlock", type = "toggle" })
-    General:keybind({ name = "Keybind", flag = "AimlockBind", mode = "Hold" })
-
-    local Settings = Column:section({ name = "Settings", side = "left", size = 0.6, icon = GetImage("Settings.png") })
-
-    Settings:dropdown({ name = "Aimlock Type", flag = "AimType", width = 110, items = { "Camera", "Mouse" }, default = "Camera" })
-    Settings:dropdown({ name = "Target Parts", flag = "AimPart", width = 110, items = { "Head", "UpperTorso", "HumanoidRootPart" }, default = "Head" })
-    Settings:slider({ name = "Smoothness", flag = "Smooth", min = 0, max = 100, default = 10, suffix = "%" })
-end
-
--- ---------------------------------------------------------------- World
-window:seperator({ name = "World" })
-
-local VisualsTab = window:tab({ name = "Visuals", tabs = { "Players" }, icon = GetImage("ESP.png") })
-
-STEP("6 visuals tab")
-
-do
-    local Column = VisualsTab:column({})
-    local Visuals = Column:section({ name = "Player Visuals", side = "left", size = 1 })
-
-    Visuals:toggle({ name = "Enabled", flag = "ESP", type = "toggle" })
-    Visuals:toggle({ name = "Bounding Boxes", type = "toggle" }):colorpicker({ flag = "BoxColor", color = Color3.new(1, 1, 1), alpha = 1 })
-    Visuals:toggle({ name = "Corner Boxes", type = "toggle" }):colorpicker({ flag = "CornerColor", color = Color3.new(1, 1, 1), alpha = 1 })
-    Visuals:toggle({ name = "Names", type = "toggle" }):colorpicker({ flag = "NameColor", color = Color3.new(1, 1, 1), alpha = 1 })
-    Visuals:toggle({ name = "Health Bars", type = "toggle" }):colorpicker({ flag = "HpColor", color = Color3.new(0, 1, 0), alpha = 1 })
-    Visuals:toggle({ name = "Chams", type = "toggle" }):colorpicker({ flag = "ChamColor", color = Color3.fromRGB(119, 120, 255), alpha = 0.8 })
-
-    local Right = VisualsTab:column({})
-    local Set = Right:section({ name = "Player Visual Settings", side = "right", size = 1, icon = GetImage("Settings.png") })
-
-    Set:toggle({ name = "Animated Boxes", type = "toggle" })
-    Set:toggle({ name = "Thermal Chams", type = "toggle" })
-    Set:textbox({ name = "Custom Tag", flag = "Tag", default = "" })
-    Set:slider({ name = "Text Size", flag = "TextSize", min = 10, max = 18, default = 12 })
-    Set:slider({ name = "Max Render Distance", flag = "Render", min = 10, max = 5000, default = 1000, suffix = "st" })
-end
 
 -- ---------------------------------------------------------------- Settings
+-- يبني تبويب Configs: حفظ/تحميل/حذف الاعدادات، لون القائمة،
+-- الالوان الجاهزة، مفتاح الاظهار، وتبديل السيرفرات.
+-- ناده دائما بعد اضافة تبويباتك.
 library:init_config(window)
-
-STEP("7 config")
 
 library.notifications:create_notification({
     name = "Talon",
-    info = "menu loaded - Insert or MENU button to toggle",
-    lifetime = 6,
+    info = "loaded - press Insert to toggle",
+    lifetime = 5,
 })
