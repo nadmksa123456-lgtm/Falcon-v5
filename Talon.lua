@@ -62,15 +62,41 @@ for _, path in next, library.folders do
     pcall(makefolder, library.directory .. path)
 end
 
+-- ============================================================================
+--  تنزيل الايقونات مع تحقق من صحة الملف
+--
+--  الاصل كان يكتب اي رد نصي غير فارغ. وعندما يفشل الرابط ترجع github
+--  النص "404: Not Found" فيُحفظ كملف PNG تالف، ثم يجده isfile في كل تشغيل
+--  لاحق فلا يعيد التنزيل ابدا — وتبقى الايقونة مفقودة الى الابد.
+--  هنا نتحقق من توقيع PNG، ونحذف اي ملف تالف من تنزيل سابق فاشل.
+-- ============================================================================
+local function Valid_PNG(Data)
+    return type(Data) == "string"
+        and #Data > 8
+        and string.byte(Data, 1) == 137
+        and string.sub(Data, 2, 4) == "PNG"
+end
+
 for Index, Value in Images do
     local Location = library.directory .. "/assets/" .. Value
+    local Ready = false
 
-    if not isfile(Location) then
+    if isfile(Location) then
+        Ready = Valid_PNG(readfile(Location))
+
+        if not Ready then
+            pcall(delfile, Location)
+        end
+    end
+
+    if not Ready then
         pcall(function()
             local Data = game:HttpGet(IMAGE_BASE .. Value)
 
-            if type(Data) == "string" and #Data > 0 then
+            if Valid_PNG(Data) then
                 writefile(Location, Data)
+            else
+                warn("[bronx.lol] bad image: " .. Value)
             end
         end)
     end
@@ -677,9 +703,9 @@ end
                     Parent = items[ "side_frame" ];
                     Name = "\0";
                     BackgroundTransparency = 1;
-                    Position = dim2(0, 0, 0, 120);
+                    Position = dim2(0, 0, 0, 92);
                     BorderColor3 = rgb(0, 0, 0);
-                    Size = dim2(1, 0, 1, -120);
+                    Size = dim2(1, 0, 1, -92);
                     BorderSizePixel = 0;
                     BackgroundColor3 = rgb(255, 255, 255)
                 }); cfg.button_holder = items[ "button_holder" ];
@@ -691,7 +717,7 @@ end
                 });
                 
                 library:create( "UIPadding" , {
-                    PaddingTop = dim(0, 16);
+                    PaddingTop = dim(0, 4);
                     PaddingBottom = dim(0, 36);
                     Parent = items[ "button_holder" ];
                     PaddingRight = dim(0, 11);
@@ -716,7 +742,7 @@ end
                     BackgroundTransparency = 1;
                     BorderSizePixel = 0;
                     Position = dim2(0, 0, 0, 0);
-                    Size = dim2(1, 0, 0, 120);
+                    Size = dim2(1, 0, 0, 92);
                     BackgroundColor3 = rgb(14, 14, 16)
                 });
 
@@ -728,7 +754,7 @@ end
                         BorderSizePixel = 0;
                         AnchorPoint = vec2(0.5, 0.5);
                         Position = dim2(0.5, 0, 0.5, 0);
-                        Size = dim2(0, 104, 0, 104);
+                        Size = dim2(0, 80, 0, 80);
                         Image = Logo;
                         ImageColor3 = themes.preset.accent;
                         ScaleType = Enum.ScaleType.Fit;
@@ -3834,6 +3860,29 @@ end
             })
 
             section:colorpicker({name = "Menu Accent", callback = function(color, alpha) library:update_theme("accent", color) end, color = themes.preset.accent})
+
+            -- الوان جاهزة تغيّر القائمة كاملة: الشعار والايقونات والتوغلات
+            local Presets = {
+                { "Blue",   rgb(0, 162, 255) },
+                { "Red",    rgb(255, 60, 60) },
+                { "Green",  rgb(60, 220, 130) },
+                { "Purple", rgb(160, 110, 255) },
+                { "Orange", rgb(255, 150, 40) },
+                { "White",  rgb(240, 240, 240) },
+            }
+
+            for _, Preset in Presets do
+                section:button({name = Preset[1], callback = function()
+                    library:update_theme("accent", Preset[2])
+                end})
+            end
+
+            section:toggle({name = "Show MENU Button", flag = "show_menu_button", type = "toggle", default = true, seperator = true, callback = function(State)
+                if window.set_toggle_button then
+                    window.set_toggle_button(State)
+                end
+            end})
+
             section:keybind({name = "Menu Bind", key = Enum.KeyCode.Insert, callback = function(bool) window.toggle_menu(bool) end, seperator = true, default = true})
 
             local _request = (http_request and http_request) or (request and request) or (http and http.request)
@@ -4322,88 +4371,10 @@ do
     Set:slider({ name = "Max Render Distance", flag = "Render", min = 10, max = 5000, default = 1000, suffix = "st" })
 end
 
--- ---------------------------------------------------------------- Menu
-window:seperator({ name = "Menu" })
-
-local MenuTab = window:tab({ name = "Customize", tabs = { "Appearance" }, icon = GetImage("Settings.png") })
-
-STEP("7 customize tab")
-
-do
-    local Column = MenuTab:column({})
-    local Colors = Column:section({ name = "Menu Color", side = "left", size = 0.55, icon = GetImage("Node.png") })
-
-    Colors:label({ name = "يغير لون القائمة كاملا: الشعار، الايقونات، التوغلات، السلايدرات.", wrapped = true })
-
-    Colors:colorpicker({
-        flag = "MenuAccent",
-        color = Color3.fromRGB(0, 162, 255),
-        alpha = 1,
-        callback = function(Color)
-            library:update_theme("accent", Color)
-        end
-    })
-
-    local Presets = {
-        { "Blue",   Color3.fromRGB(0, 162, 255) },
-        { "Red",    Color3.fromRGB(255, 60, 60) },
-        { "Green",  Color3.fromRGB(60, 220, 130) },
-        { "Purple", Color3.fromRGB(160, 110, 255) },
-        { "Orange", Color3.fromRGB(255, 150, 40) },
-        { "White",  Color3.fromRGB(240, 240, 240) },
-    }
-
-    for _, Preset in Presets do
-        Colors:button({ name = Preset[1], callback = function()
-            library:update_theme("accent", Preset[2])
-        end})
-    end
-
-    local Right = MenuTab:column({})
-    local Control = Right:section({ name = "Menu Control", side = "right", size = 0.45, icon = GetImage("Wrench.png") })
-
-    Control:toggle({
-        name = "Show MENU Button",
-        flag = "ShowToggleButton",
-        type = "toggle",
-        default = true,
-        callback = function(State)
-            window.set_toggle_button(State)
-        end
-    })
-
-    Control:keybind({
-        name = "Menu Keybind",
-        flag = "MenuKey",
-        key = Enum.KeyCode.Insert,
-        mode = "Toggle",
-        default = true,
-        callback = function(State)
-            window.toggle_menu(State)
-        end
-    })
-
-    Control:button({ name = "Hide Menu", callback = function()
-        window.toggle_menu(false)
-    end})
-
-    Control:label({ name = "زر MENU اسفل يسار الشاشة يظهر القائمة مرة اخرى.", wrapped = true })
-
-    local Unload = Right:section({ name = "Danger", side = "right", size = 0.3, icon = GetImage("unlocked.png") })
-
-    Unload:button({ name = "Unload Menu", callback = function()
-        if library.toggle_gui then
-            library.toggle_gui:Destroy()
-        end
-
-        library:unload_menu()
-    end})
-end
-
 -- ---------------------------------------------------------------- Settings
 library:init_config(window)
 
-STEP("8 config")
+STEP("7 config")
 
 library.notifications:create_notification({
     name = "Talon",
